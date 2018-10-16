@@ -130,11 +130,11 @@ Prop.CropScape = prop.lc.df
 
 #------------------------------------5. Extract NLCD------------------------------------
 
-#----Retransform blra to match blcd----
+#----Retransform blra to match nlcd----
 blra = spTransform(blra, crs(nlcd))
 
 
-#----Extracting CropScape values----
+#----Extracting NLCD values----
 nlcd.vx = velox(stack(nlcd))
 spol = gBuffer(blra, width=100, byid=TRUE)
 spdf = SpatialPolygonsDataFrame(spol, data.frame(id=1:length(spol)), FALSE)
@@ -169,8 +169,8 @@ colnames(prop.lc.df) = paste(sort(unique(values(nlcd))))
 Prop.NLCD = prop.lc.df
 
 #------------------------------------6. Model------------------------------------
-blra
-
+blra = as.data.frame(blra)[,c(1,2)]
+blra = cbind(blra, Prop.CropScape, Prop.NLCD)
 
 #------------------------------------7. Prediction grid------------------------------------
 
