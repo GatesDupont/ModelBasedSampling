@@ -88,16 +88,40 @@ blra = rbind(blra, bg)
 
 #----Back to spatial----
 coords = cbind(blra$lon, blra$lat)
-sp = SpatialPoints(coords)
-spdf = SpatialPointsDataFrame(coords=sp, data=blra)
-
+blra.coords = SpatialPoints(coords)
+blra = SpatialPointsDataFrame(coords=blra.coords, data=blra)
+crs(blra) = crs(crops)
 
 #------------------------------------4. Extract CropScape------------------------------------
+
+#----Extracting CropScape values----
 crops.vx = velox(stack(crops))
-spol = gBuffer(blra, width=500, byid=TRUE)
+spol = gBuffer(blra, width=100, byid=TRUE)
 spdf = SpatialPolygonsDataFrame(spol, data.frame(id=1:length(spol)), FALSE)
 ex.mat = crops.vx$extract(spdf)
-print(ex.mat)
+
+#----Calculating proportional cover----
+date()
+if(T){
+  if(exists("prop.lc.df")){rm(prop.lc.df)}
+  prop.lc.df = data.frame(1:74)
+  for(i in 1:length(ex.mat)){
+    if(exists("empty.pr.lc")){rm(empty.pr.lc)}
+    if(exists("lc.raw")){rm(lc.raw)}
+    empty.pr.lc = data.frame(Var1=sort(unique(values(crops))), prop=rep(0,74))
+    lc.raw = as.data.frame(table(unlist(ex.mat[[i]])))
+    lc.raw$prop = lc.raw$Freq/sum(lc.raw$Freq)
+    empty.pr.lc$prop[match(lc.raw$Var1, empty.pr.lc$Var1)] <- lc.raw$prop
+    proportion.lc = data.frame(empty.pr.lc$prop)
+    prop.lc.df = cbind(prop.lc.df, proportion.lc)
+  }
+  prop.lc.df = prop.lc.df[,-1]
+  prop.lc.df = t(prop.lc.df)
+  rownames(prop.lc.df) = NULL
+}
+date()
+View(prop.lc.df)
+
 
 #----Retransform to nlcd crs----
 
