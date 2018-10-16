@@ -101,11 +101,14 @@ spdf = SpatialPolygonsDataFrame(spol, data.frame(id=1:length(spol)), FALSE)
 ex.mat = crops.vx$extract(spdf)
 
 #----Calculating proportional cover----
+pb = txtProgressBar(min = 1, max = length(ex.mat), initial = 1) 
 date()
 if(T){
   if(exists("prop.lc.df")){rm(prop.lc.df)}
   prop.lc.df = data.frame(1:74)
   for(i in 1:length(ex.mat)){
+    setTxtProgressBar(pb,i)
+    #print(i)
     if(exists("empty.pr.lc")){rm(empty.pr.lc)}
     if(exists("lc.raw")){rm(lc.raw)}
     empty.pr.lc = data.frame(Var1=sort(unique(values(crops))), prop=rep(0,74))
@@ -121,7 +124,8 @@ if(T){
 }
 date()
 View(prop.lc.df)
-
+colnames(prop.lc.df) = paste(sort(unique(values(crops))))
+Prop.CropScape = prop.lc.df
 
 #----Retransform to nlcd crs----
 
