@@ -6,6 +6,8 @@ library(raster)
 library(FedData)
 library(dismo)
 library(dplyr)
+library(velox)
+library(rgeos)
 
 "NOTES"
 
@@ -84,8 +86,20 @@ bg$pa = 0
 colnames(bg) = c("lon", "lat", "pa")
 blra = rbind(blra, bg)
 
+#----Back to spatial----
+coords = cbind(blra$lon, blra$lat)
+sp = SpatialPoints(coords)
+spdf = SpatialPointsDataFrame(coords=sp, data=blra)
+
 
 #------------------------------------4. Extract CropScape------------------------------------
+crops.vx = velox(stack(crops))
+spol = gBuffer(blra, width=500, byid=TRUE)
+spdf = SpatialPolygonsDataFrame(spol, data.frame(id=1:length(spol)), FALSE)
+ex.mat = crops.vx$extract(spdf)
+print(ex.mat)
+
+#----Retransform to nlcd crs----
 
 #------------------------------------5. Extract NLCD------------------------------------
 
@@ -95,4 +109,4 @@ blra = rbind(blra, bg)
 
 #------------------------------------8. Model predictions------------------------------------
 
-#------------------------------------9. Model predictions------------------------------------
+#------------------------------------9. Plot predictions------------------------------------
