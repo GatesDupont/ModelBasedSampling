@@ -8,7 +8,11 @@ library(dismo)
 library(dplyr)
 
 "NOTES"
-# Include elevation
+
+#https://www.gis-blog.com/r-raster-data-acquisition/
+# Other predictors
+  # elevation
+  # world clim
 
 
 #------------------------------------1. CropScape------------------------------------
@@ -39,7 +43,7 @@ if(F){
 }
 
 
-#------------------------------------3. BLRA OCC------------------------------------
+#------------------------------------3. BLRA------------------------------------
 
 #----Download from gbif----
 #occ = gbif("Laterallus", "jamaicensis*", geo=TRUE, ext=extent(crops))
