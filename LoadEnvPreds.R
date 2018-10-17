@@ -47,11 +47,20 @@ if(F){
 
 #------------------------------------3. Elevation------------------------------------
 
-#------------------------------------4. WorldClim------------------------------------
 meanLatLon = data.frame(lon=mean(bg$lon), lat=mean(bg$lat))
 coordinates(meanLatLon) = ~lon+lat
 crs(meanLatLon) = crs(crops)
 meanLatLon = data.frame(spTransform(meanLatLon, CRS("+init=epsg:4326")))
+
+srtm1 = getData("SRTM", lat=meanLatLon$lat, lon=meanLatLon$lon)
+srtm2 = getData("SRTM", lat=40.794833, lon=-122.151466)
+elevation = mosaic(srtm1, srtm2, fun=mean)
+
+spplot(elevation) +
+  layer(panel.points(blra.plot@coords[,1], blra.plot@coords[,2],
+                     col="green", cex=0.001), data=blra.plot)
+
+#------------------------------------4. WorldClim------------------------------------
 
 climate = getData('worldclim', var='bio', res=0.5, lat=meanLatLon$lat, lon=meanLatLon$lon)
 
