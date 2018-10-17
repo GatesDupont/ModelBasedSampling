@@ -223,7 +223,9 @@ climate.extVals = data.frame(extract(climate, blra))
 blra = as.data.frame(blra)
 blra = cbind(blra, climate.extVals)
 blra$elevation = elevation.extVals
+blra = blra[ , !(names(blra) %in% c("coords.x1", "coords.x2"))]
 #write.csv(blra, "~/Model-based Sampling R/blra_CropScape_NLCD_WorldClim_Elev.csv")
+# Coords are in crs(crops)
 
 #------------------------------------10. Model------------------------------------
 
