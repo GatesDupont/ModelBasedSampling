@@ -14,7 +14,7 @@ library(caTools)
 
 "NOTES"
 # Predictors
-  # https://www.gis-blog.com/r-raster-data-acquisition/
+# https://www.gis-blog.com/r-raster-data-acquisition/
 
 #------------------------------------1. CropScape------------------------------------
 crops_str = "~/Remote Sensing Data/CropScapeBLRA/CDL_2017_clip_20181016131456_984201100.tif"
@@ -238,6 +238,23 @@ rf = randomForest(pa ~ ., blra, ntree=50)
 evaluate(test[test$pa != 0,], test[test$pa == 0,], rf)
 
 #------------------------------------11. Prediction grid------------------------------------
+
+#----Generating prediction grid -- COORDINATES----
+states.full = c("California")
+
+
+# load some spatial data. Administrative Boundary
+us = raster::getData('GADM', country = 'US', level = 1)
+st.contour <- us[us$NAME_1 %in% states.full,]
+
+st.contour = spTransform(st.contour, crs(crops))
+
+grid <- makegrid(st.contour, cellsize = 100)
+grid <- SpatialPoints(grid, proj4string = CRS(proj4string(st.contour)))
+#date() ; grid <- grid[st.contour, ] ; date()
+grid = crop(grid, crops)
+
+plot(grid)
 
 #------------------------------------12. Model predictions------------------------------------
 
