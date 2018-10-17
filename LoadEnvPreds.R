@@ -13,12 +13,8 @@ library(randomForest)
 library(caTools)
 
 "NOTES"
-
-#https://www.gis-blog.com/r-raster-data-acquisition/
-# Other predictors
-  # elevation
-  # world clim
-
+# Predictors
+  # https://www.gis-blog.com/r-raster-data-acquisition/
 
 #------------------------------------1. CropScape------------------------------------
 crops_str = "~/Remote Sensing Data/CropScapeBLRA/CDL_2017_clip_20181016131456_984201100.tif"
@@ -245,4 +241,4 @@ evaluate(test[test$pa != 0,], test[test$pa == 0,], rf)
 
 #------------------------------------12. Model predictions------------------------------------
 
-#------------------------------------12. Plot predictions------------------------------------
+#------------------------------------13. Plot predictions------------------------------------
