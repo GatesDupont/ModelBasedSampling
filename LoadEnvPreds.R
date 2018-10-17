@@ -74,6 +74,7 @@ climate = getData('worldclim', var='bio', res=0.5, lat=meanLatLon$lat, lon=meanL
 #   layer(panel.points(blra.plot@coords[,1], blra.plot@coords[,2],
 #                      col="green", cex=0.001), data=blra.plot)
 
+
 #------------------------------------5. BLRA------------------------------------
 
 #----Download from gbif----
@@ -201,13 +202,33 @@ colnames(Prop.NLCD) = c("cs11", "cs21", "cs22", "cs23", "cs24", "cs31", "cs41", 
 
 blra = as.data.frame(blra)[,c(1,2, 3)]
 blra = cbind(blra, Prop.CropScape, Prop.NLCD)
-
 #write.csv(blra, "~/Model-based Sampling R/blra_CropScape_NLCD.csv")
 
-#------------------------------------8. Model------------------------------------
+coords = cbind(blra$lon, blra$lat)
+blra.coords = SpatialPoints(coords)
+blra = SpatialPointsDataFrame(coords=blra.coords, data=blra)
+crs(blra) = crs(nlcd)
 
-#------------------------------------10. Prediction grid------------------------------------
 
-#------------------------------------11. Model predictions------------------------------------
+#------------------------------------8. Extract Elevation------------------------------------
+
+blra = spTransform(blra, crs(elevation))
+elevation.extVals = extract(elevation, blra)
+
+#------------------------------------9, Extract Climate------------------------------------
+
+climate.extVals = data.frame(extract(climate, blra))
+
+#----Bringing everything together
+blra = as.data.frame(blra)
+blra = cbind(blra, climate.extVals)
+blra$elevation = elevation.extVals
+#write.csv(blra, "~/Model-based Sampling R/blra_CropScape_NLCD_WorldClim_Elev.csv")
+
+#------------------------------------10. Model------------------------------------
+
+#------------------------------------11. Prediction grid------------------------------------
+
+#------------------------------------12. Model predictions------------------------------------
 
 #------------------------------------12. Plot predictions------------------------------------
