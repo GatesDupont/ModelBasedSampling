@@ -8,6 +8,7 @@ library(dismo)
 library(dplyr)
 library(velox)
 library(rgeos)
+library(latticeExtra)
 
 "NOTES"
 
@@ -44,8 +45,27 @@ if(F){
                                           label, "/NLCD 2011"))
 }
 
+#------------------------------------3. Elevation------------------------------------
 
-#------------------------------------3. BLRA------------------------------------
+#------------------------------------4. WorldClim------------------------------------
+meanLatLon = data.frame(lon=mean(bg$lon), lat=mean(bg$lat))
+coordinates(meanLatLon) = ~lon+lat
+crs(meanLatLon) = crs(crops)
+meanLatLon = data.frame(spTransform(meanLatLon, CRS("+init=epsg:4326")))
+
+climate = getData('worldclim', var='bio', res=0.5, lat=meanLatLon$lat, lon=meanLatLon$lon)
+
+# #----Making sure this worked----
+# coords = cbind(blra$lon, blra$lat)
+# blra.coords = SpatialPoints(coords)
+# blra = SpatialPointsDataFrame(coords=blra.coords, data=blra)
+# crs(blra) = crs(nlcd)
+# blra.plot = spTransform(blra, crs(climate))
+# spplot(climate$bio1_11) +
+#   layer(panel.points(blra.plot@coords[,1], blra.plot@coords[,2],
+#                      col="green", cex=0.001), data=blra.plot)
+
+#------------------------------------5. BLRA------------------------------------
 
 #----Download from gbif----
 #occ = gbif("Laterallus", "jamaicensis*", geo=TRUE, ext=extent(crops))
@@ -92,7 +112,7 @@ blra.coords = SpatialPoints(coords)
 blra = SpatialPointsDataFrame(coords=blra.coords, data=blra)
 crs(blra) = crs(crops)
 
-#------------------------------------4. Extract CropScape------------------------------------
+#------------------------------------6. Extract CropScape------------------------------------
 
 #----Extracting CropScape values----
 crops.vx = velox(stack(crops))
@@ -128,7 +148,7 @@ colnames(prop.lc.df) = paste(sort(unique(values(crops))))
 Prop.CropScape = prop.lc.df
 
 
-#------------------------------------5. Extract NLCD------------------------------------
+#------------------------------------7. Extract NLCD------------------------------------
 
 #----Retransform blra to match nlcd----
 blra = spTransform(blra, crs(nlcd))
@@ -167,13 +187,18 @@ date()
 View(prop.lc.df)
 colnames(prop.lc.df) = paste(sort(unique(values(nlcd))))
 Prop.NLCD = prop.lc.df
+colnames(Prop.NLCD) = c("cs11", "cs21", "cs22", "cs23", "cs24", "cs31", "cs41", "cs42", 
+                        "cs43", "cs52", "cs71", "cs81", "cs82", "cs90", "cs95")
 
-#------------------------------------6. Model------------------------------------
-blra = as.data.frame(blra)[,c(1,2)]
+blra = as.data.frame(blra)[,c(1,2, 3)]
 blra = cbind(blra, Prop.CropScape, Prop.NLCD)
 
-#------------------------------------7. Prediction grid------------------------------------
+#write.csv(blra, "~/Model-based Sampling R/blra_CropScape_NLCD.csv")
 
-#------------------------------------8. Model predictions------------------------------------
+#------------------------------------8. Model------------------------------------
 
-#------------------------------------9. Plot predictions------------------------------------
+#------------------------------------10. Prediction grid------------------------------------
+
+#------------------------------------11. Model predictions------------------------------------
+
+#------------------------------------12. Plot predictions------------------------------------
