@@ -9,6 +9,8 @@ library(dplyr)
 library(velox)
 library(rgeos)
 library(latticeExtra)
+library(randomForest)
+library(caTools)
 
 "NOTES"
 
@@ -228,6 +230,16 @@ blra = blra[ , !(names(blra) %in% c("coords.x1", "coords.x2"))]
 # Coords are in crs(crops)
 
 #------------------------------------10. Model------------------------------------
+
+#----Splitting into training and testing----
+set.seed(4797) 
+sample = sample.split(blra$pa, SplitRatio = .7)
+train = subset(blra, sample == TRUE)
+test  = subset(blra, sample == FALSE)
+
+rf = randomForest(pa ~ ., blra, ntree=50)
+
+evaluate(test[test$pa != 0,], test[test$pa == 0,], rf)
 
 #------------------------------------11. Prediction grid------------------------------------
 
