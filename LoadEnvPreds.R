@@ -243,19 +243,16 @@ evaluate(test[test$pa != 0,], test[test$pa == 0,], rf)
 #------------------------------------11. Prediction grid------------------------------------
 
 #----Generating prediction grid -- COORDINATES----
-states.full = c("California")
-
-
+#states.full = c("California")
 # load some spatial data. Administrative Boundary
-us = raster::getData('GADM', country = 'US', level = 1)
-st.contour <- us[us$NAME_1 %in% states.full,]
-
-st.contour = spTransform(st.contour, crs(crops))
-
-grid <- makegrid(st.contour, cellsize = 100)
+#us = raster::getData('GADM', country = 'US', level = 1)
+#st.contour <- us[us$NAME_1 %in% states.full,]
+#st.contour = spTransform(st.contour, crs(crops))
+grid <- makegrid(bbox(crops), cellsize = 100)
 grid <- SpatialPoints(grid, proj4string = CRS(proj4string(st.contour)))
+#grid <- makegrid(st.contour, cellsize = 100)
 #date() ; grid <- grid[st.contour, ] ; date()
-grid = crop(grid, crops)
+#grid = crop(grid, crops)
 
 plot(grid, pch=3, cex=0.0001)
 
