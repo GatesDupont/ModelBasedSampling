@@ -131,6 +131,8 @@ ex.mat = crops.vx$extract(spdf)
 #----Calculating proportional cover----
 pb = txtProgressBar(min = 1, max = length(ex.mat), initial = 1) 
 date()
+unique.crops = sort(unique(values(crops))) ###
+prop.rep = rep(0,74)
 if(T){
   if(exists("prop.lc.df")){rm(prop.lc.df)}
   prop.lc.df = data.frame(1:74)
@@ -139,7 +141,7 @@ if(T){
     #print(i)
     if(exists("empty.pr.lc")){rm(empty.pr.lc)}
     if(exists("lc.raw")){rm(lc.raw)}
-    empty.pr.lc = data.frame(Var1=sort(unique(values(crops))), prop=rep(0,74))
+    empty.pr.lc = data.frame(Var1=unique.crops, prop=prop.rep)
     lc.raw = as.data.frame(table(unlist(ex.mat[[i]])))
     lc.raw$prop = lc.raw$Freq/sum(lc.raw$Freq)
     empty.pr.lc$prop[match(lc.raw$Var1, empty.pr.lc$Var1)] <- lc.raw$prop
@@ -154,7 +156,6 @@ date()
 View(prop.lc.df)
 colnames(prop.lc.df) = paste(sort(unique(values(crops))))
 Prop.CropScape = prop.lc.df
-
 
 #------------------------------------7. Extract NLCD------------------------------------
 
@@ -254,7 +255,7 @@ grid <- SpatialPoints(grid, proj4string = CRS(proj4string(st.contour)))
 #date() ; grid <- grid[st.contour, ] ; date()
 grid = crop(grid, crops)
 
-plot(grid)
+plot(grid, pch=3, cex=0.0001)
 
 #------------------------------------12. Model predictions------------------------------------
 
