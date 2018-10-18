@@ -130,9 +130,9 @@ ex.mat = crops.vx$extract(spdf)
 
 #----Calculating proportional cover----
 pb = txtProgressBar(min = 1, max = length(ex.mat), initial = 1) 
-date()
 unique.crops = sort(unique(values(crops))) ###
 prop.rep = rep(0,74)
+date()
 if(T){
   if(exists("prop.lc.df")){rm(prop.lc.df)}
   prop.lc.df = data.frame(1:74)
@@ -172,6 +172,8 @@ rm(nlcd.vx)
 
 #----Calculating proportional cover----
 pb = txtProgressBar(min = 1, max = length(ex.mat), initial = 1) 
+unique.nlcd = sort(unique(values(nlcd))) ###
+prop.rep = rep(0,74)
 date()
 if(T){
   if(exists("prop.lc.df")){rm(prop.lc.df)}
@@ -181,7 +183,7 @@ if(T){
     #print(i)
     if(exists("empty.pr.lc")){rm(empty.pr.lc)}
     if(exists("lc.raw")){rm(lc.raw)}
-    empty.pr.lc = data.frame(Var1=sort(unique(values(nlcd))), prop=rep(0,15))
+    empty.pr.lc = data.frame(Var1=unique.nlcd, prop=rep(0,15))
     lc.raw = as.data.frame(table(unlist(ex.mat[[i]])))
     lc.raw$prop = lc.raw$Freq/sum(lc.raw$Freq)
     empty.pr.lc$prop[match(lc.raw$Var1, empty.pr.lc$Var1)] <- lc.raw$prop
