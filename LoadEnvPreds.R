@@ -36,7 +36,7 @@ crops = crop(crops, crops.ext)
 #------------------------------------2. BLRA------------------------------------
 
 #----Download from gbif----
-#occ = gbif("Laterallus", "jamaicensis*", geo=TRUE, ext=extent(crops))
+occ = gbif("Laterallus", "jamaicensis*", geo=TRUE, ext=extent(crops))
 pres.raw = occ[occ$adm1 == "California", c("lat", "lon")]
 pres = pres.raw[complete.cases(pres.raw),]
 
@@ -82,7 +82,7 @@ crs(blra) = crs(crops)
 
 #------------------------------------3. NLCD------------------------------------
 label = "CalNLCD"
-if(F){
+if(T){
   nlcd = get_nlcd(template=crops, label=label, year = 2011, 
                   dataset = "landcover", 
                   raw.dir = "~/RAW/Remote Sensing Data/NLCD", 
