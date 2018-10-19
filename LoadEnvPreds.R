@@ -33,7 +33,7 @@ crops.ext@xmin = crops.ext@xmin+((crops.ext@xmax - crops.ext@xmin)*0.1)
 crops = crop(crops, crops.ext)
 
 
-#------------------------------------3. BLRA------------------------------------
+#------------------------------------2. BLRA------------------------------------
 
 #----Download from gbif----
 #occ = gbif("Laterallus", "jamaicensis*", geo=TRUE, ext=extent(crops))
@@ -80,7 +80,7 @@ blra.coords = SpatialPoints(coords)
 blra = SpatialPointsDataFrame(coords=blra.coords, data=blra)
 crs(blra) = crs(crops)
 
-#------------------------------------2. NLCD------------------------------------
+#------------------------------------3. NLCD------------------------------------
 label = "CalNLCD"
 if(F){
   nlcd = get_nlcd(template=crops, label=label, year = 2011, 
