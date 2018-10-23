@@ -17,6 +17,10 @@ library(caTools)
 # https://www.gis-blog.com/r-raster-data-acquisition/
 
 #------------------------------------1. CropScape------------------------------------
+
+# Implement library(cdlTools); getCDL() to get this data instead. Better reproducibility. 
+# Set up an extent object beforehand, with the area of the prediction grid.
+
 crops_str = "~/Remote Sensing Data/CropScapeBLRA/CDL_2017_clip_20181016131456_984201100.tif"
 crops.raw = raster(crops_str)
 
