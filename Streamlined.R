@@ -82,5 +82,41 @@ bg = data.frame(bg@coords)
 #----Combining presence/absence----
 species = data.frame(rbind(pres.nD, bg))
 species$pa = c(rep(1, length(pres.nD$lat)), rep(0, length(bg$lat)))
+species.spatial = SpatialPointsDataFrame(cbind(species$lon, species$lat), data=species, proj4string = CRS("+init=epsg:4326"))
 
 #------------------------------------6. Extract CropScape------------------------------------
+
+#----Converting data to CropScape crs----
+species.spatial.crops = spTransform(species.spatial, crs(crops))
+
+#----Extracting CropScape values----
+crops.vx = velox(stack(crops))
+spol = gBuffer(species.spatial.crops, width=100, byid=TRUE)
+spdf = SpatialPolygonsDataFrame(spol, data.frame(id=1:length(spol)), FALSE)
+ex.mat = crops.vx$extract(spdf)
+rm(crops.vx)
+
+#----Calculating proportional cover----
+pb = txtProgressBar(min = 1, max = length(ex.mat), initial = 1) 
+unique.crops = sort(unique(values(crops)))
+prop.rep = rep(0,74)
+if(T){
+  if(exists("prop.lc.df")){rm(prop.lc.df)}
+  prop.lc.df = data.frame(1:74)
+  for(i in 1:length(ex.mat)){
+    setTxtProgressBar(pb,i)
+    if(exists("empty.pr.lc")){rm(empty.pr.lc)}
+    if(exists("lc.raw")){rm(lc.raw)}
+    empty.pr.lc = data.frame(Var1=unique.crops, prop=prop.rep)
+    lc.raw = as.data.frame(table(unlist(ex.mat[[i]])))
+    lc.raw$prop = lc.raw$Freq/sum(lc.raw$Freq)
+    empty.pr.lc$prop[match(lc.raw$Var1, empty.pr.lc$Var1)] <- lc.raw$prop
+    proportion.lc = data.frame(empty.pr.lc$prop)
+    prop.lc.df = cbind(prop.lc.df, proportion.lc)
+  }
+  prop.lc.df = prop.lc.df[,-1]
+  prop.lc.df = t(prop.lc.df)
+  rownames(prop.lc.df) = NULL
+}
+colnames(prop.lc.df) = paste(sort(unique(values(crops))))
+Prop.CropScape = prop.lc.df
