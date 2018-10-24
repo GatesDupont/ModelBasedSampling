@@ -27,7 +27,7 @@ ll = c(38.533879, -122.549340)
 corners.coords = t(data.frame(rev(ur), rev(ll)))
 study.extent.corners = SpatialPoints(corners.coords, CRS("+init=epsg:4326"))
 
-#------------------------------------1. CropScape------------------------------------
+#------------------------------------1. Get CropScape------------------------------------
 
 #----Pulling cropscape data----
 CropScape = getCDL("CA", 2017)
@@ -36,13 +36,13 @@ crops.raw = CropScape$CA2017
 #----Cropping cropscape data to study extent----
 crops = crop(crops.raw, spTransform(study.extent.corners, crs(CropScape$CA2017)))
 
-#------------------------------------2. NLCD------------------------------------
+#------------------------------------2. Get NLCD------------------------------------
 
 #----Puilling nlcd data----
 label = "CalNLCD"
 nlcd = get_nlcd(template=crops, label=label, year = 2011) # auto-crops
 
-#------------------------------------3. Elevation------------------------------------
+#------------------------------------3. Get Elevation------------------------------------
 
 #----Pulling elevation data----
 srtm1 = getData("SRTM", lat=ur[1], lon=ur[2])
@@ -52,11 +52,11 @@ srtm2 = getData("SRTM", lat=ll[1], lon=ll[2])
 elevation = mosaic(srtm1, srtm2, fun=mean)
 elevation = crop(elevation, spTransform(study.extent.corners, crs(elevation)))
 
-#------------------------------------4. WorldClim------------------------------------
+#------------------------------------4. Get WorldClim------------------------------------
 climate = getData('worldclim', var='bio', res=0.5, lat=ur[1], lon=ur[2])
 climate = crop(climate, spTransform(study.extent.corners, crs(climate)))
 
-#------------------------------------5. BLRA------------------------------------
+#------------------------------------5. Get eBird------------------------------------
 
 #----Download from gbif----
 occ = gbif("Laterallus", "jamaicensis*", geo=TRUE, ext=extent(study.extent.corners))
@@ -80,7 +80,7 @@ bg = spTransform(bg, CRS("+init=epsg:4326"))
 bg = data.frame(bg@coords)
 
 #----Combining presence/absence----
-blra = data.frame(rbind(pres.nD, bg))
-blra$pa = c(rep(1, length(pres.nD$lat)), rep(0, length(bg$lat)))
+species = data.frame(rbind(pres.nD, bg))
+species$pa = c(rep(1, length(pres.nD$lat)), rep(0, length(bg$lat)))
 
 #------------------------------------6. Extract CropScape------------------------------------
