@@ -31,7 +31,7 @@ study.extent.corners = SpatialPoints(corners.coords, CRS("+init=epsg:4326"))
 
 #----Pulling cropscape data----
 CropScape = getCDL("CA", 2017)
-crops.raw = raster(CropScape$CA2017)
+crops.raw = CropScape$CA2017
 
 #----Cropping cropscape data to study extent----
 crops = crop(crops.raw, spTransform(study.extent.corners, crs(CropScape$CA2017)))
@@ -68,12 +68,19 @@ pres.nD = as.data.frame(pres)
 pres.nD$combined = paste0(pres.nD$lat, ", ", pres.nD$lon)
 pres.nD = pres.nD %>%
   distinct(lon, lat, .keep_all = T) # Keeping only unique values
-coordinates(pres.nD) = ~lon+lat
-crs(pres.nD) = CRS("+init=epsg:4326")
+pres.nD = pres.nD[,c(1,2)]
 
 #----Pseudo-absence points----
 set.seed(4797)
 bg = as.data.frame(randomPoints(crops, 750)) # Not subsetting in polygons because small area
-coordinates(bg) = ~x+y
+colnames(bg) = c("lon", "lat")
+coordinates(bg) = ~lon+lat
 crs(bg) = crs(crops)
-bg = spTransform(bg, crs(pres.nD))
+bg = spTransform(bg, CRS("+init=epsg:4326"))
+bg = data.frame(bg@coords)
+
+#----Combining presence/absence----
+blra = data.frame(rbind(pres.nD, bg))
+blra$pa = c(rep(1, length(pres.nD$lat)), rep(0, length(bg$lat)))
+
+#------------------------------------6. Extract CropScape------------------------------------
