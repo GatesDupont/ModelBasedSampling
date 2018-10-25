@@ -194,8 +194,8 @@ rf = randomForest(pa ~ ., species.df, ntree=50)
 evaluate(test[test$pa != 0,], test[test$pa == 0,], rf)
 
 #------------------------------------11. Grid Coordinates------------------------------------
-grid = makegrid(bbox(crops), cellsize = 5000) # cellsize is resolution in meters. Buffer radius was 100, d=2*100
-grid = SpatialPoints(grid, proj4string = CRS(proj4string(crops)))
+grid = makegrid(species.spatial.crops, cellsize = 5000) # cellsize is resolution in meters. Buffer radius was 100, d=2*100
+grid = SpatialPoints(grid, proj4string = CRS(proj4string(species.spatial.crops)))
 grid = spTransform(grid, crs(species.spatial))
 
 #------------------------------------12. Grid CropScape------------------------------------
