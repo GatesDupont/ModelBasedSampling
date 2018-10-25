@@ -120,3 +120,43 @@ if(T){
 }
 colnames(prop.lc.df) = paste(sort(unique(values(crops))))
 Prop.CropScape = prop.lc.df
+
+#------------------------------------7. Extract NLCD------------------------------------
+
+#----Converting data to nlcd crs----
+species.spatial.nlcd = spTransform(species.spatial, crs(nlcd))
+
+#----Extracting NLCD values----
+nlcd.vx = velox(stack(nlcd))
+spol = gBuffer(species.spatial.nlcd, width=100, byid=TRUE)
+spdf = SpatialPolygonsDataFrame(spol, data.frame(id=1:length(spol)), FALSE)
+ex.mat = nlcd.vx$extract(spdf)
+rm(nlcd.vx)
+
+#----Calculating proportional cover----
+pb = txtProgressBar(min = 1, max = length(ex.mat), initial = 1) 
+unique.nlcd = sort(unique(values(nlcd))) ###
+prop.rep = rep(0,16)
+if(T){
+  if(exists("prop.lc.df")){rm(prop.lc.df)}
+  prop.lc.df = data.frame(1:16)
+  for(i in 1:length(ex.mat)){
+    setTxtProgressBar(pb,i)
+    if(exists("empty.pr.lc")){rm(empty.pr.lc)}
+    if(exists("lc.raw")){rm(lc.raw)}
+    empty.pr.lc = data.frame(Var1=unique.nlcd, prop=prop.rep)
+    lc.raw = as.data.frame(table(unlist(ex.mat[[i]])))
+    lc.raw$prop = lc.raw$Freq/sum(lc.raw$Freq)
+    empty.pr.lc$prop[match(lc.raw$Var1, empty.pr.lc$Var1)] <- lc.raw$prop
+    proportion.lc = data.frame(empty.pr.lc$prop)
+    prop.lc.df = cbind(prop.lc.df, proportion.lc) # Error pops up for length.
+  }
+  prop.lc.df = prop.lc.df[,-1]
+  prop.lc.df = t(prop.lc.df)
+  rownames(prop.lc.df) = NULL
+}
+View(prop.lc.df)
+colnames(prop.lc.df) = paste(sort(unique(values(nlcd))))
+Prop.NLCD = prop.lc.df
+colnames(Prop.NLCD) = c("cs11", "cs12", "cs21", "cs22", "cs23", "cs24", "cs31", "cs41", 
+                        "cs42", "cs43", "cs52", "cs71", "cs81", "cs82", "cs90", "cs95")
