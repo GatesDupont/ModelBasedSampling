@@ -19,10 +19,16 @@ library(caTools)
 #----Hand-selected points from gmaps----
 ur = c(41.056109, -120.771108)
 ll = c(38.533879, -122.549340)
+ul = c(ur[1],ll[2])
+lr = c(ll[1],ur[2])
+
+extent.long = c(ur[2],ll[2],ul[2],lr[2])
+extent.lat = c(ur[1],ll[1],ul[1],lr[1])
+extent.df = data.frame(cbind(extent.long, extent.lat))
 
 #----Spatial points object with embedded extent----
-corners.coords = t(data.frame(rev(ur), rev(ll)))
-study.extent.corners = SpatialPoints(corners.coords, CRS("+init=epsg:4326"))
+coordinates(extent.df) = ~extent.long+extent.lat
+study.extent.corners = SpatialPoints(extent.df, CRS("+init=epsg:4326"))
 
 #------------------------------------1. Get CropScape------------------------------------
 
@@ -96,10 +102,10 @@ rm(crops.vx)
 #----Calculating proportional cover----
 pb = txtProgressBar(min = 1, max = length(ex.mat), initial = 1) 
 unique.crops = sort(unique(values(crops)))
-prop.rep = rep(0,74)
+prop.rep = rep(0,75)
 if(T){
   if(exists("prop.lc.df")){rm(prop.lc.df)}
-  prop.lc.df = data.frame(1:74)
+  prop.lc.df = data.frame(1:75)
   for(i in 1:length(ex.mat)){
     setTxtProgressBar(pb,i)
     if(exists("empty.pr.lc")){rm(empty.pr.lc)}
@@ -207,10 +213,10 @@ rm(crops.vx)
 #----Calculating proportional cover----
 pb = txtProgressBar(min = 1, max = length(ex.mat), initial = 1) 
 unique.crops = sort(unique(values(crops)))
-prop.rep = rep(0,74)
+prop.rep = rep(0,75)
 if(T){
   if(exists("prop.lc.df")){rm(prop.lc.df)}
-  prop.lc.df = data.frame(1:74)
+  prop.lc.df = data.frame(1:75)
   for(i in 1:length(ex.mat)){
     setTxtProgressBar(pb,i)
     if(exists("empty.pr.lc")){rm(empty.pr.lc)}
@@ -294,6 +300,8 @@ rf.predictions = predict(rf, pred.df)
 
 predictions = pred.df[,c("long", "lat")]
 predictions$rf = rf.predictions
+
+plot(rasterFromXYZ(predictions))
 
 qplot(long, lat, colour = rf, data=predictions, size=rf*3) +
   scale_colour_gradient2(midpoint = median(predictions$rf),
