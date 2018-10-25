@@ -161,7 +161,7 @@ Prop.NLCD = prop.lc.df
 species.spatial.elevation = spTransform(species.spatial, crs(elevation))
 elevation.extVals = extract(elevation, species.spatial.elevation)
 
-#------------------------------------9, Extract Climate------------------------------------
+#------------------------------------9. Extract Climate------------------------------------
 
 #----Converting data to climate crs----
 species.spatial.climate = spTransform(species.spatial, crs(climate))
@@ -186,3 +186,116 @@ rf = randomForest(pa ~ ., species.df, ntree=50)
 
 #----Evaluating model performance----
 evaluate(test[test$pa != 0,], test[test$pa == 0,], rf)
+
+#------------------------------------11. Grid Coordinates------------------------------------
+grid = makegrid(bbox(crops), cellsize = 5000) # cellsize is resolution in meters. Buffer radius was 100, d=2*100
+grid = SpatialPoints(grid, proj4string = CRS(proj4string(crops)))
+grid = spTransform(grid, crs(species.spatial))
+
+#------------------------------------12. Grid CropScape------------------------------------
+
+#----Converting data to CropScape crs----
+species.spatial.crops = spTransform(grid, crs(crops))
+
+#----Extracting CropScape values----
+crops.vx = velox(stack(crops))
+spol = gBuffer(species.spatial.crops, width=100, byid=TRUE)
+spdf = SpatialPolygonsDataFrame(spol, data.frame(id=1:length(spol)), FALSE)
+ex.mat = crops.vx$extract(spdf)
+rm(crops.vx)
+
+#----Calculating proportional cover----
+pb = txtProgressBar(min = 1, max = length(ex.mat), initial = 1) 
+unique.crops = sort(unique(values(crops)))
+prop.rep = rep(0,74)
+if(T){
+  if(exists("prop.lc.df")){rm(prop.lc.df)}
+  prop.lc.df = data.frame(1:74)
+  for(i in 1:length(ex.mat)){
+    setTxtProgressBar(pb,i)
+    if(exists("empty.pr.lc")){rm(empty.pr.lc)}
+    if(exists("lc.raw")){rm(lc.raw)}
+    empty.pr.lc = data.frame(Var1=unique.crops, prop=prop.rep)
+    lc.raw = as.data.frame(table(unlist(ex.mat[[i]])))
+    lc.raw$prop = lc.raw$Freq/sum(lc.raw$Freq)
+    empty.pr.lc$prop[match(lc.raw$Var1, empty.pr.lc$Var1)] <- lc.raw$prop
+    proportion.lc = data.frame(empty.pr.lc$prop)
+    prop.lc.df = cbind(prop.lc.df, proportion.lc)
+  }
+  prop.lc.df = prop.lc.df[,-1]
+  prop.lc.df = t(prop.lc.df)
+  rownames(prop.lc.df) = NULL
+}
+colnames(prop.lc.df) = paste0("cs", sort(unique(values(crops))))
+Prop.CropScape = prop.lc.df
+
+#------------------------------------13. Grid NLCD------------------------------------
+
+#----Converting data to nlcd crs----
+species.spatial.nlcd = spTransform(grid, crs(nlcd))
+
+#----Extracting NLCD values----
+nlcd.vx = velox(stack(nlcd))
+spol = gBuffer(species.spatial.nlcd, width=100, byid=TRUE)
+spdf = SpatialPolygonsDataFrame(spol, data.frame(id=1:length(spol)), FALSE)
+ex.mat = nlcd.vx$extract(spdf)
+rm(nlcd.vx)
+
+#----Calculating proportional cover----
+pb = txtProgressBar(min = 1, max = length(ex.mat), initial = 1) 
+unique.nlcd = sort(unique(values(nlcd))) ###
+prop.rep = rep(0,16)
+if(T){
+  if(exists("prop.lc.df")){rm(prop.lc.df)}
+  prop.lc.df = data.frame(1:16)
+  for(i in 1:length(ex.mat)){
+    setTxtProgressBar(pb,i)
+    if(exists("empty.pr.lc")){rm(empty.pr.lc)}
+    if(exists("lc.raw")){rm(lc.raw)}
+    empty.pr.lc = data.frame(Var1=unique.nlcd, prop=prop.rep)
+    lc.raw = as.data.frame(table(unlist(ex.mat[[i]])))
+    lc.raw$prop = lc.raw$Freq/sum(lc.raw$Freq)
+    empty.pr.lc$prop[match(lc.raw$Var1, empty.pr.lc$Var1)] <- lc.raw$prop
+    proportion.lc = data.frame(empty.pr.lc$prop)
+    prop.lc.df = cbind(prop.lc.df, proportion.lc) # Error pops up for length.
+  }
+  prop.lc.df = prop.lc.df[,-1]
+  prop.lc.df = t(prop.lc.df)
+  rownames(prop.lc.df) = NULL
+}
+colnames(prop.lc.df) = paste0("nlcd", sort(unique(values(nlcd))))
+Prop.NLCD = prop.lc.df
+
+#------------------------------------14. Grid Elevation------------------------------------
+
+#----Converting data to elevation crs----
+species.spatial.elevation = spTransform(grid, crs(elevation))
+elevation.extVals = extract(elevation, species.spatial.elevation)
+
+#------------------------------------15. Grid Climate------------------------------------
+
+#----Converting data to climate crs----
+species.spatial.climate = spTransform(grid, crs(climate))
+climate.extVals = data.frame(extract(climate, species.spatial.climate))
+
+#----Bringing everything together----
+pred.df = as.data.frame(grid@coords)
+colnames(pred.df) = c("long", "lat")
+pred.df = cbind(pred.df, Prop.CropScape, Prop.NLCD, elevation.extVals, climate.extVals)
+pred.df = pred.df[complete.cases(pred.df), ]
+
+test.grid = pred.df[,c("long", "lat")]
+coordinates(test.grid) = ~long+lat
+crs(test.grid) = crs(species.spatial)
+test.grid = spTransform(test.grid, crs(climate))
+
+#------------------------------------16. Model Predictions------------------------------------
+rf.predictions = predict(rf, pred.df)
+
+predictions = pred.df[,c("long", "lat")]
+predictions$rf = rf.predictions
+
+qplot(long, lat, colour = rf, data=predictions, size=rf*3) +
+  scale_colour_gradient2(midpoint = median(predictions$rf),
+                         low = "yellow", mid = "cyan2", high = "red") +
+  theme_void()
