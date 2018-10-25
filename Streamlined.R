@@ -75,11 +75,9 @@ pres.nD = pres.nD[,c(1,2)]
 
 #----Pseudo-absence points----
 set.seed(4797)
-bg = as.data.frame(randomPoints(crops, 750)) # Not subsetting in polygons because small area
+bg = as.data.frame(spsample(study.extent.corners,n=750,"random"))
 colnames(bg) = c("lon", "lat")
 coordinates(bg) = ~lon+lat
-crs(bg) = crs(crops)
-bg = spTransform(bg, CRS("+init=epsg:4326"))
 bg = data.frame(bg@coords)
 
 #----Combining presence/absence----
