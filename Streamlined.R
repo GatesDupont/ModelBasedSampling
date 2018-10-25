@@ -13,9 +13,6 @@ library(latticeExtra)
 library(randomForest)
 library(caTools)
 
-"NOTES"
-# Predictors
-# https://www.gis-blog.com/r-raster-data-acquisition/
 
 #------------------------------------0. Extent------------------------------------
 
@@ -118,7 +115,7 @@ if(T){
   prop.lc.df = t(prop.lc.df)
   rownames(prop.lc.df) = NULL
 }
-colnames(prop.lc.df) = paste(sort(unique(values(crops))))
+colnames(prop.lc.df) = paste0("cs", sort(unique(values(crops))))
 Prop.CropScape = prop.lc.df
 
 #------------------------------------7. Extract NLCD------------------------------------
@@ -155,8 +152,37 @@ if(T){
   prop.lc.df = t(prop.lc.df)
   rownames(prop.lc.df) = NULL
 }
-View(prop.lc.df)
-colnames(prop.lc.df) = paste(sort(unique(values(nlcd))))
+colnames(prop.lc.df) = paste0("nlcd", sort(unique(values(nlcd))))
 Prop.NLCD = prop.lc.df
-colnames(Prop.NLCD) = c("cs11", "cs12", "cs21", "cs22", "cs23", "cs24", "cs31", "cs41", 
-                        "cs42", "cs43", "cs52", "cs71", "cs81", "cs82", "cs90", "cs95")
+
+#------------------------------------8. Extract Elevation------------------------------------
+
+#----Converting data to elevation crs----
+species.spatial.elevation = spTransform(species.spatial, crs(elevation))
+elevation.extVals = extract(elevation, species.spatial.elevation)
+
+#------------------------------------9, Extract Climate------------------------------------
+
+#----Converting data to climate crs----
+species.spatial.climate = spTransform(species.spatial, crs(climate))
+climate.extVals = data.frame(extract(climate, species.spatial.climate))
+
+#----Bringing everything together----
+species.df = as.data.frame(species.spatial@coords)
+colnames(species.df) = c("long", "lat")
+species.df = cbind(pa = species.spatial@data[,3], species.df, Prop.CropScape, Prop.NLCD, elevation.extVals, climate.extVals)
+species.df = species.df[complete.cases(species.df), ]
+
+#------------------------------------10. Model------------------------------------
+
+#----Splitting into training and testing----
+set.seed(4797) 
+sample = sample.split(species.df$pa, SplitRatio = .7)
+train = subset(species.df, sample == TRUE)
+test  = subset(species.df, sample == FALSE)
+
+#----Running Random Forest model----
+rf = randomForest(pa ~ ., species.df, ntree=50)
+
+#----Evaluating model performance----
+evaluate(test[test$pa != 0,], test[test$pa == 0,], rf)
