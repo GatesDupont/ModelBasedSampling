@@ -193,7 +193,7 @@ rf = randomForest(pa ~ ., species.df, ntree=50)
 evaluate(test[test$pa != 0,], test[test$pa == 0,], rf)
 
 #------------------------------------11. Grid Coordinates------------------------------------
-grid = makegrid(species.spatial.elevation, cellsize = 0.005) # In map units (lat/lon here)
+grid = makegrid(species.spatial.elevation, cellsize = 0.01) # In map units (lat/lon here)
 grid = SpatialPoints(grid, proj4string = CRS(proj4string(species.spatial.elevation)))
 
 #------------------------------------12. Grid CropScape------------------------------------
