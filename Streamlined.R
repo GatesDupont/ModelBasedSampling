@@ -292,7 +292,6 @@ rf.predictions = predict(rf, pred.df)
 predictions = pred.df[,c("long", "lat")]
 predictions$rf = rf.predictions
 
-
 #------------------------------------18. Plotting------------------------------------
 
 #----Creating the raster----
