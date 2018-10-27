@@ -287,13 +287,13 @@ colnames(pred.df) = c("long", "lat")
 pred.df = cbind(pred.df, Prop.CropScape, Prop.NLCD, elevation.extVals, climate.extVals)
 pred.df = pred.df[complete.cases(pred.df), ]
 
-#------------------------------------16. Model Predictions------------------------------------
+#------------------------------------17. Model Predictions------------------------------------
 rf.predictions = predict(rf, pred.df)
 predictions = pred.df[,c("long", "lat")]
 predictions$rf = rf.predictions
 
 
-#------------------------------------17. Plotting------------------------------------
+#------------------------------------18. Plotting------------------------------------
 
 #----Creating the raster----
 SDM.raster = rasterFromXYZ(predictions)
