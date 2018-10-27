@@ -12,6 +12,7 @@ library(rgeos)
 library(latticeExtra)
 library(randomForest)
 library(caTools)
+library(leaflet)
 
 
 #------------------------------------0. Extent------------------------------------
@@ -37,13 +38,13 @@ CropScape = getCDL("CA", 2017)
 crops.raw = CropScape$CA2017
 
 #----Cropping cropscape data to study extent----
-crops = crop(crops.raw, spTransform(study.extent.corners, crs(CropScape$CA2017)))
+crops = crop(crops.raw, extent(spTransform(study.extent.corners, crs(CropScape$CA2017)))*1.25)
 
 #------------------------------------2. Get NLCD------------------------------------
 
 #----Puilling nlcd data----
 label = "CalNLCD"
-nlcd = get_nlcd(template=crops, label=label, year = 2011) # auto-crops
+nlcd = get_nlcd(template=crops, label=label, year = 2011, force.redo = T) # auto-crops
 
 #------------------------------------3. Get Elevation------------------------------------
 
@@ -53,11 +54,11 @@ srtm2 = getData("SRTM", lat=ll[1], lon=ll[2])
 
 #----Stitching elevation tiles----
 elevation = mosaic(srtm1, srtm2, fun=mean)
-elevation = crop(elevation, spTransform(study.extent.corners, crs(elevation)))
+elevation = crop(elevation, extent(spTransform(study.extent.corners, crs(elevation)))*1.25)
 
 #------------------------------------4. Get WorldClim------------------------------------
 climate = getData('worldclim', var='bio', res=0.5, lat=ur[1], lon=ur[2])
-climate = crop(climate, spTransform(study.extent.corners, crs(climate)))
+climate = crop(climate, extent(spTransform(study.extent.corners, crs(climate)))*1.25)
 
 #------------------------------------5. Get eBird------------------------------------
 
@@ -100,10 +101,10 @@ rm(crops.vx)
 #----Calculating proportional cover----
 pb = txtProgressBar(min = 1, max = length(ex.mat), initial = 1) 
 unique.crops = sort(unique(values(crops)))
-prop.rep = rep(0,75)
+prop.rep = rep(0,length(unique.crops))
 if(T){
   if(exists("prop.lc.df")){rm(prop.lc.df)}
-  prop.lc.df = data.frame(1:75)
+  prop.lc.df = data.frame(1:length(unique.crops))
   for(i in 1:length(ex.mat)){
     setTxtProgressBar(pb,i)
     if(exists("empty.pr.lc")){rm(empty.pr.lc)}
@@ -136,11 +137,11 @@ rm(nlcd.vx)
 
 #----Calculating proportional cover----
 pb = txtProgressBar(min = 1, max = length(ex.mat), initial = 1) 
-unique.nlcd = sort(unique(values(nlcd))) ###
-prop.rep = rep(0,16)
+unique.nlcd = sort(unique(values(nlcd)))
+prop.rep = rep(0,length(unique.nlcd))
 if(T){
   if(exists("prop.lc.df")){rm(prop.lc.df)}
-  prop.lc.df = data.frame(1:16)
+  prop.lc.df = data.frame(1:length(unique.nlcd))
   for(i in 1:length(ex.mat)){
     setTxtProgressBar(pb,i)
     if(exists("empty.pr.lc")){rm(empty.pr.lc)}
@@ -192,9 +193,8 @@ rf = randomForest(pa ~ ., species.df, ntree=50)
 evaluate(test[test$pa != 0,], test[test$pa == 0,], rf)
 
 #------------------------------------11. Grid Coordinates------------------------------------
-grid = makegrid(species.spatial.crops, cellsize = 5000) # cellsize is resolution in meters. Buffer radius was 100, d=2*100
-grid = SpatialPoints(grid, proj4string = CRS(proj4string(species.spatial.crops)))
-grid = spTransform(grid, crs(species.spatial))
+grid = makegrid(species.spatial.elevation, cellsize = 0.005) # In map units (lat/lon here)
+grid = SpatialPoints(grid, proj4string = CRS(proj4string(species.spatial.elevation)))
 
 #------------------------------------12. Grid CropScape------------------------------------
 
@@ -211,10 +211,10 @@ rm(crops.vx)
 #----Calculating proportional cover----
 pb = txtProgressBar(min = 1, max = length(ex.mat), initial = 1) 
 unique.crops = sort(unique(values(crops)))
-prop.rep = rep(0,75)
+prop.rep = rep(0,length(unique.crops))
 if(T){
   if(exists("prop.lc.df")){rm(prop.lc.df)}
-  prop.lc.df = data.frame(1:75)
+  prop.lc.df = data.frame(1:length(unique.crops))
   for(i in 1:length(ex.mat)){
     setTxtProgressBar(pb,i)
     if(exists("empty.pr.lc")){rm(empty.pr.lc)}
@@ -247,11 +247,11 @@ rm(nlcd.vx)
 
 #----Calculating proportional cover----
 pb = txtProgressBar(min = 1, max = length(ex.mat), initial = 1) 
-unique.nlcd = sort(unique(values(nlcd))) ###
-prop.rep = rep(0,16)
+unique.nlcd = sort(unique(values(nlcd)))
+prop.rep = rep(0,length(unique.nlcd))
 if(T){
   if(exists("prop.lc.df")){rm(prop.lc.df)}
-  prop.lc.df = data.frame(1:16)
+  prop.lc.df = data.frame(1:length(unique.nlcd))
   for(i in 1:length(ex.mat)){
     setTxtProgressBar(pb,i)
     if(exists("empty.pr.lc")){rm(empty.pr.lc)}
@@ -272,7 +272,6 @@ Prop.NLCD = prop.lc.df
 
 #------------------------------------14. Grid Elevation------------------------------------
 
-#----Converting data to elevation crs----
 species.spatial.elevation = spTransform(grid, crs(elevation))
 elevation.extVals = extract(elevation, species.spatial.elevation)
 
@@ -282,26 +281,30 @@ elevation.extVals = extract(elevation, species.spatial.elevation)
 species.spatial.climate = spTransform(grid, crs(climate))
 climate.extVals = data.frame(extract(climate, species.spatial.climate))
 
-#----Bringing everything together----
+#------------------------------------16. Combining data------------------------------------
 pred.df = as.data.frame(grid@coords)
 colnames(pred.df) = c("long", "lat")
 pred.df = cbind(pred.df, Prop.CropScape, Prop.NLCD, elevation.extVals, climate.extVals)
 pred.df = pred.df[complete.cases(pred.df), ]
 
-test.grid = pred.df[,c("long", "lat")]
-coordinates(test.grid) = ~long+lat
-crs(test.grid) = crs(species.spatial)
-test.grid = spTransform(test.grid, crs(climate))
-
 #------------------------------------16. Model Predictions------------------------------------
 rf.predictions = predict(rf, pred.df)
-
 predictions = pred.df[,c("long", "lat")]
 predictions$rf = rf.predictions
 
+
+#------------------------------------17. Plotting------------------------------------
+
+#----Creating the raster----
+SDM.raster = rasterFromXYZ(predictions)
+crs(SDM.raster) = crs(grid)
+
+#----Basic plot----
 plot(rasterFromXYZ(predictions))
 
-qplot(long, lat, colour = rf, data=predictions, size=rf*3) +
-  scale_colour_gradient2(midpoint = median(predictions$rf),
-                         low = "yellow", mid = "cyan2", high = "red") +
-  theme_void()
+#----Leaflet----
+pal = colorNumeric(rev(c("#FF0000", "#FFFF00", "#228B22")), values(SDM.raster),
+                    na.color = "transparent")
+leaflet() %>% addTiles(urlTemplate = "https://mts1.google.com/vt/lyrs=s&hl=en&src=app&x={x}&y={y}&z={z}&s=G", attribution = 'Google') %>%
+  addRasterImage(SDM.raster, colors = pal, opacity = 0.4) %>%
+  addLegend(pal = pal, values = seq(0,0.96,0.1), title = "Pr(Occurence)")
