@@ -93,7 +93,7 @@ p = rasterToPolygons(r)
 plot(p)
 points(pres.nD$lat~pres.nD$lon, pch=20, col="red", cex=0.3)
 
-pres.nD = pres.samp
+pres.nD = as.data.frame(pres.samp)
 
 #----Pseudo-absence points----
 set.seed(4797)
@@ -207,29 +207,20 @@ rf.dfs = list()
 starts = seq(length(rf.df.pres$pa)+1,length(species.df$pa), by=length(rf.df.pres$pa))
 for(i in 1:10){
   rf.dfs[[i]] =  data.frame(rbind(rf.df.pres, species.df[c(starts[i]:(starts[i]+length(rf.df.pres$pa))),]))
+  rf.dfs[[i]]= rf.dfs[[i]][1:(length(rf.dfs[[i]]$pa)-1),]
 } # last one in rf.dfs[[10]] is NA, just a simple counting problem.
 
-#rf.df1 = rbind(rf.df1, species.df[c(length(rf.df.pres$pa):(2*length(rf.df.pres$pa))),])
+#----Running Random Forest model----
+rf = vector("list", 10)
+for(i in 1:10){
+  rf[[i]] = randomForest(pa ~ ., rf.dfs[[i]], ntree=50)
+}
 
 #----Splitting into training and testing----
 set.seed(4797) 
 sample = sample.split(species.df$pa, SplitRatio = .7)
 train = subset(species.df, sample == TRUE)
 test  = subset(species.df, sample == FALSE)
-
-#----Running Random Forest model----
-rf1 = randomForest(pa ~ ., rf.dfs[[1]], ntree=50)
-rf2 = randomForest(pa ~ ., rf.dfs[[2]], ntree=50)
-rf3 = randomForest(pa ~ ., rf.dfs[[3]], ntree=50)
-rf4 = randomForest(pa ~ ., rf.dfs[[4]], ntree=50)
-rf5 = randomForest(pa ~ ., rf.dfs[[5]], ntree=50)
-rf6 = randomForest(pa ~ ., rf.dfs[[6]], ntree=50)
-rf7 = randomForest(pa ~ ., rf.dfs[[7]], ntree=50)
-rf8 = randomForest(pa ~ ., rf.dfs[[8]], ntree=50)
-rf9 = randomForest(pa ~ ., rf.dfs[[9]], ntree=50)
-rf10 = randomForest(pa ~ ., rf.dfs[[10]], ntree=50)
-
-#https://stackoverflow.com/questions/38505890/error-using-model-averaging-and-predicting-with-mumln-in-r
 
 #----Evaluating model performance----
 evaluate(test[test$pa != 0,], test[test$pa == 0,], rf)
@@ -331,9 +322,17 @@ pred.df = cbind(pred.df, Prop.CropScape, Prop.NLCD, elevation.extVals, climate.e
 pred.df = pred.df[complete.cases(pred.df), ]
 
 #------------------------------------17. Model Predictions------------------------------------
-rf.predictions = predict(rf, pred.df)
+
+#----Model-averaged predictions----
+rf.p = data.frame(predict(rf[[1]], pred.df))
+for(i in 2:10){
+  rf.p=cbind(rf.p, predict(rf[[i]], pred.df))
+}
+rf.avg = rowMeans(rf.p)
+
+#rf.predictions = predict(rf[[1]], pred.df)
 predictions = pred.df[,c("long", "lat")]
-predictions$rf = rf.predictions
+predictions$rf = rf.avg
 
 #------------------------------------18. Plotting------------------------------------
 
@@ -345,6 +344,7 @@ crs(SDM.raster) = crs(grid)
 plot(rasterFromXYZ(predictions), main = "Species Distribution Model",
      col=colorRampPalette(c("darkgreen", "yellow", "red"))(100), zlim=c(0,1))
 map("state", add=T)
+points(pres$lat~pres$lon, col="purple", cex=0.7, pch=20)
 
 #----Leaflet----
 pal = colorNumeric(rev(c("#FF0000", "#FFFF00", "#228B22")), values(SDM.raster),
@@ -353,4 +353,3 @@ leaflet() %>% addTiles(urlTemplate = "https://mts1.google.com/vt/lyrs=s&hl=en&sr
   addRasterImage(SDM.raster, colors = pal, opacity = 0.4) %>%
   addLegend(pal = pal, values = seq(0,0.96,0.1), title = "Pr(Occurence)") %>%
   addCircleMarkers(lng=pres.nD$lon, lat = pres.nD$lat, radius=0.4)
-
