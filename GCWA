@@ -207,9 +207,9 @@ rf.dfs = list()
 starts = seq(length(rf.df.pres$pa)+1,length(species.df$pa), by=length(rf.df.pres$pa))
 for(i in 1:10){
   rf.dfs[[i]] =  data.frame(rbind(rf.df.pres, species.df[c(starts[i]:(starts[i]+length(rf.df.pres$pa))),]))
-}
+} # last one in rf.dfs[[10]] is NA, just a simple counting problem.
 
-rf.df1 = rbind(rf.df1, species.df[c(length(rf.df.pres$pa):(2*length(rf.df.pres$pa))),])
+#rf.df1 = rbind(rf.df1, species.df[c(length(rf.df.pres$pa):(2*length(rf.df.pres$pa))),])
 
 #----Splitting into training and testing----
 set.seed(4797) 
@@ -353,3 +353,4 @@ leaflet() %>% addTiles(urlTemplate = "https://mts1.google.com/vt/lyrs=s&hl=en&sr
   addRasterImage(SDM.raster, colors = pal, opacity = 0.4) %>%
   addLegend(pal = pal, values = seq(0,0.96,0.1), title = "Pr(Occurence)") %>%
   addCircleMarkers(lng=pres.nD$lon, lat = pres.nD$lat, radius=0.4)
+
