@@ -14,6 +14,7 @@ library(randomForest)
 library(caTools)
 library(leaflet)
 library(maps)
+library(viridis)
 
 
 #------------------------------------0. Extent------------------------------------
@@ -114,7 +115,7 @@ species.spatial.crops = spTransform(species.spatial, crs(crops))
 
 #----Extracting CropScape values----
 crops.vx = velox(stack(crops))
-spol = gBuffer(species.spatial.crops, width=100, byid=TRUE)
+spol = gBuffer(species.spatial.crops, width=500, byid=TRUE)
 spdf = SpatialPolygonsDataFrame(spol, data.frame(id=1:length(spol)), FALSE)
 ex.mat = crops.vx$extract(spdf)
 rm(crops.vx)
@@ -151,7 +152,7 @@ species.spatial.nlcd = spTransform(species.spatial, crs(nlcd))
 
 #----Extracting NLCD values----
 nlcd.vx = velox(stack(nlcd))
-spol = gBuffer(species.spatial.nlcd, width=100, byid=TRUE)
+spol = gBuffer(species.spatial.nlcd, width=500, byid=TRUE)
 spdf = SpatialPolygonsDataFrame(spol, data.frame(id=1:length(spol)), FALSE)
 ex.mat = nlcd.vx$extract(spdf)
 rm(nlcd.vx)
@@ -210,7 +211,7 @@ for(i in 1:10){
   rf.dfs[[i]]= rf.dfs[[i]][1:(length(rf.dfs[[i]]$pa)-1),]
 } # last one in rf.dfs[[10]] is NA, just a simple counting problem.
 
-#----Running Random Forest model----
+#----Running Random Forest models----
 rf = vector("list", 10)
 for(i in 1:10){
   rf[[i]] = randomForest(pa ~ ., rf.dfs[[i]], ntree=50)
@@ -226,7 +227,7 @@ test  = subset(species.df, sample == FALSE)
 evaluate(test[test$pa != 0,], test[test$pa == 0,], rf)
 
 #------------------------------------11. Grid Coordinates------------------------------------
-grid = makegrid(species.spatial.elevation, cellsize = 0.01) # In map units (lat/lon here)
+grid = makegrid(species.spatial.elevation, cellsize = 0.005) # In map units (lat/lon here)
 grid = SpatialPoints(grid, proj4string = CRS(proj4string(species.spatial.elevation)))
 
 #------------------------------------12. Grid CropScape------------------------------------
@@ -236,7 +237,7 @@ species.spatial.crops = spTransform(grid, crs(crops))
 
 #----Extracting CropScape values----
 crops.vx = velox(stack(crops))
-spol = gBuffer(species.spatial.crops, width=100, byid=TRUE)
+spol = gBuffer(species.spatial.crops, width=500, byid=TRUE)
 spdf = SpatialPolygonsDataFrame(spol, data.frame(id=1:length(spol)), FALSE)
 ex.mat = crops.vx$extract(spdf)
 rm(crops.vx)
@@ -274,7 +275,7 @@ species.spatial.nlcd = spTransform(grid, crs(nlcd))
 
 #----Extracting NLCD values----
 nlcd.vx = velox(stack(nlcd))
-spol = gBuffer(species.spatial.nlcd, width=100, byid=TRUE)
+spol = gBuffer(species.spatial.nlcd, width=500, byid=TRUE)
 spdf = SpatialPolygonsDataFrame(spol, data.frame(id=1:length(spol)), FALSE)
 ex.mat = nlcd.vx$extract(spdf)
 rm(nlcd.vx)
@@ -346,6 +347,20 @@ plot(rasterFromXYZ(predictions), main = "Species Distribution Model",
 map("state", add=T)
 points(pres$lat~pres$lon, col="purple", cex=0.7, pch=20)
 
+plot(rasterFromXYZ(predictions), main = "Species Distribution Model",
+     col=colorRampPalette(c("gray", "yellow", "orange", "darkorchid", "darkorchid4", "black"))(100), zlim=c(0,1))
+
+plot(rasterFromXYZ(predictions), main = "Species Distribution Model",
+     col=plasma(100), zlim=c(0,1))
+
+plot(rasterFromXYZ(predictions), main = "Species Distribution Model",
+     col=colorRampPalette(c("blue", "cyan", "green", "yellow", "orange", "red"))(100), zlim=c(0,1))
+
+plot(rasterFromXYZ(predictions), main = "Species Distribution Model", zlim=c(0,1), col=topo.colors(100))
+
+plot(rasterFromXYZ(predictions), main = "Species Distribution Model",
+     col=colorRampPalette(c("beige", "purple", "black"))(100), zlim=c(0,1))
+
 #----Leaflet----
 pal = colorNumeric(rev(c("#FF0000", "#FFFF00", "#228B22")), values(SDM.raster),
                    na.color = "transparent")
@@ -353,3 +368,15 @@ leaflet() %>% addTiles(urlTemplate = "https://mts1.google.com/vt/lyrs=s&hl=en&sr
   addRasterImage(SDM.raster, colors = pal, opacity = 0.4) %>%
   addLegend(pal = pal, values = seq(0,0.96,0.1), title = "Pr(Occurence)") %>%
   addCircleMarkers(lng=pres.nD$lon, lat = pres.nD$lat, radius=0.4)
+
+leaflet() %>% addTiles() %>%
+  addRasterImage(SDM.raster, colors = pal, opacity = 0.7) %>%
+  addLegend(pal = pal, values = seq(0,max(predictions$rf),0.01), title = "Pr(Occurence)") %>%
+  addCircleMarkers(lng=pres$lon, lat = pres$lat, radius=0.4)
+
+leaflet() %>% addTiles() %>%
+  addRasterImage(SDM.raster, colors = pal, opacity = 0.7) %>%
+  addLegend(pal = pal, values = seq(0,max(predictions$rf),0.01), title = "Pr(Occurence)")
+
+
+save(SDM.raster,file="gcwa_500m.Rdata")
