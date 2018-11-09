@@ -379,4 +379,4 @@ leaflet() %>% addTiles() %>%
   addLegend(pal = pal, values = seq(0,max(predictions$rf),0.01), title = "Pr(Occurence)")
 
 
-save(SDM.raster,file="gcwa_500m.Rdata")
+#save(SDM.raster,file=".Rdata")
