@@ -372,11 +372,12 @@ leaflet() %>% addTiles(urlTemplate = "https://mts1.google.com/vt/lyrs=s&hl=en&sr
 leaflet() %>% addTiles() %>%
   addRasterImage(SDM.raster, colors = pal, opacity = 0.7) %>%
   addLegend(pal = pal, values = seq(0,max(predictions$rf),0.01), title = "Pr(Occurence)") %>%
-  addCircleMarkers(lng=pres$lon, lat = pres$lat, radius=0.4)
+  addCircleMarkers(lng=pres.nD$lon, lat = pres.nD$lat, radius=0.4)
 
 leaflet() %>% addTiles() %>%
   addRasterImage(SDM.raster, colors = pal, opacity = 0.7) %>%
-  addLegend(pal = pal, values = seq(0,max(predictions$rf),0.01), title = "Pr(Occurence)")
+  addLegend(pal = pal, values = seq(0,max(predictions$rf),0.01), title = "Pr(Occurence)") %>%
+  addCircleMarkers(lng=pres.samp$lon, lat = pres.samp$lat, radius=0.4)
 
 
 #save(SDM.raster,file=".Rdata")
