@@ -19,9 +19,16 @@ library(viridis)
 
 #------------------------------------0. Extent------------------------------------
 
+#----State Contour----
+states.full = c("Texas")
+us = getData('GADM', country = 'US', level = 1)
+st.contour = us[us$NAME_1 %in% states.full,]
+st.contour = spTransform(st.contour, CRS("+init=epsg:4326"))
+st.contour = aggregate(st.contour) # remove boundaries between states
+
 #----Hand-selected points from gmaps----
-ur = c(36.999446, -109.044844)
-ll = c(31.456855, -114.871880)
+ur = c(bbox(st.contour)[2,2], bbox(st.contour)[1,2])
+ll = c(bbox(st.contour)[2,1], bbox(st.contour)[1,1])
 ul = c(ur[1],ll[2])
 lr = c(ll[1],ur[2])
 
@@ -36,11 +43,11 @@ study.extent.corners = SpatialPoints(extent.df, CRS("+init=epsg:4326"))
 #------------------------------------1. Get CropScape------------------------------------
 
 #----Pulling cropscape data----
-CropScape = getCDL("AZ", 2017)
-crops.raw = CropScape$AZ2017
+CropScape = getCDL("TX", 2017)
+crops.raw = CropScape$TX2017
 
 #----Cropping cropscape data to study extent----
-crops = crop(crops.raw, extent(spTransform(study.extent.corners, crs(crops.raw)))*1.25)
+crops = crop(crops.raw, extent(spTransform(study.extent.corners, crs(crops.raw)))*1.1)
 
 #------------------------------------2. Get NLCD------------------------------------
 
@@ -51,27 +58,41 @@ nlcd = get_nlcd(template=crops, label=label, year = 2011, force.redo = T) # auto
 #------------------------------------3. Get Elevation------------------------------------
 
 #----Pulling elevation data----
-srtm1 = getData("SRTM", lat=ur[1], lon=ur[2])
-srtm2 = getData("SRTM", lat=ll[1], lon=ll[2])
-srtm3 = getData("SRTM", lat=ur[1], lon=ll[2])
-srtm4 = getData("SRTM", lat=ll[1], lon=ur[2])
+lat.increment = (ur[1]-ll[1])/2
+long.increment = (ur[2]-ll[2])/3
+e.lats = c(ul[1], ul[1]-lat.increment, ul[1]-(2*lat.increment))
+e.longs = c(ul[2], ul[2]+long.increment, ul[2]+(2*long.increment), ul[2]+(3*long.increment))
+
+srtm1 = getData("SRTM", lat=e.lats[1], lon=e.longs[1])
+srtm2 = getData("SRTM", lat=e.lats[1], lon=e.longs[2])
+srtm3 = getData("SRTM", lat=e.lats[1], lon=e.longs[3])
+srtm4 = getData("SRTM", lat=e.lats[1], lon=e.longs[4])
+srtm5 = getData("SRTM", lat=e.lats[2], lon=e.longs[1])
+srtm6 = getData("SRTM", lat=e.lats[2], lon=e.longs[2])
+srtm7 = getData("SRTM", lat=e.lats[2], lon=e.longs[3])
+srtm8 = getData("SRTM", lat=e.lats[2], lon=e.longs[4])
+srtm9 = getData("SRTM", lat=e.lats[3], lon=e.longs[1])
+srtm10 = getData("SRTM", lat=e.lats[3], lon=e.longs[2])
+srtm11 = getData("SRTM", lat=e.lats[3], lon=e.longs[3])
+srtm12 = getData("SRTM", lat=e.lats[3], lon=e.longs[4])
 
 #----Stitching elevation tiles----
-elevation = mosaic(srtm1, srtm2, srtm3, srtm4, fun=mean)
-elevation = crop(elevation, extent(spTransform(study.extent.corners, crs(elevation)))*1.25)
+elevation = mosaic(srtm1, srtm2, srtm3, srtm4, srtm5, srtm6, srtm7, srtm8, srtm9, srtm10, srtm11, srtm12, fun=max)
+rm(srtm1, srtm2, srtm3, srtm4, srtm5, srtm6, srtm7, srtm8, srtm9, srtm10, srtm11, srtm12)
+elevation = crop(elevation, extent(spTransform(study.extent.corners, crs(elevation)))*1.1)
 
 #------------------------------------4. Get WorldClim------------------------------------
 climate1 = getData('worldclim', var='bio', res=0.5, lat=ll[1], lon=ll[2])
 climate2 = getData('worldclim', var='bio', res=0.5, lat=ur[1], lon=ur[2])
 climate = mosaic(climate1, climate2, fun=mean)
 
-climate = crop(climate, extent(spTransform(study.extent.corners, crs(climate)))*1.25)
+climate = crop(climate, extent(spTransform(study.extent.corners, crs(climate)))*1.1)
 
 #------------------------------------5. Get eBird------------------------------------
 
 #----Download from gbif----
 occ = gbif("Micrathene", "whitneyi*", geo=TRUE, ext=extent(study.extent.corners))
-pres.raw = occ[occ$adm1 == "Arizona", c("lat", "lon")]
+pres.raw = occ[occ$adm1 == "Texas", c("lat", "lon")]
 pres = pres.raw[complete.cases(pres.raw),]
 
 #----Removing duplicates----
@@ -98,7 +119,7 @@ pres.nD = as.data.frame(pres.samp)
 
 #----Pseudo-absence points----
 set.seed(4797)
-bg = as.data.frame(spsample(study.extent.corners,n=length(pres.nD$lat)*10,"random"))
+bg = as.data.frame(spsample(st.contour,n=length(pres.nD$lat)*10,"random"))
 colnames(bg) = c("lon", "lat")
 coordinates(bg) = ~lon+lat
 bg = data.frame(bg@coords)
@@ -229,11 +250,7 @@ for(i in 1:10){
 #------------------------------------11. Grid Coordinates------------------------------------
 
 #----Generating prediction grid----
-states.full = c("Arizona")
-us = getData('GADM', country = 'US', level = 1)
-st.contour = us[us$NAME_1 %in% states.full,]
-st.contour = spTransform(st.contour, CRS(proj4string(species.spatial.elevation)))
-grid = makegrid(st.contour, cellsize = 0.01) # 0.05
+grid = makegrid(st.contour, cellsize = 0.05) # 0.05
 grid = SpatialPoints(grid, proj4string = CRS(proj4string(st.contour)))
 date() ; grid <- grid[st.contour, ] ; date()
 
@@ -248,11 +265,11 @@ crops.vx = velox(stack(crops))
 spol = gBuffer(species.spatial.crops, width=1000, byid=TRUE)
 spdf = SpatialPolygonsDataFrame(spol, data.frame(id=1:length(spol)), FALSE)
 ex.mat = crops.vx$extract(spdf)
-rm(crops.vx)
+rm(crops.vx, spol, spdf)
 
 #----Calculating proportional cover----
 pb = txtProgressBar(min = 1, max = length(ex.mat), initial = 1) 
-unique.crops = sort(unique(values(crops)))
+unique.crops = sort(unique(crops))
 prop.rep = rep(0,length(unique.crops))
 if(T){
   if(exists("prop.lc.df")){rm(prop.lc.df)}
@@ -273,8 +290,9 @@ if(T){
   rownames(prop.lc.df) = NULL
 }
 
-colnames(prop.lc.df) = paste0("cs", sort(unique(values(crops))))
+colnames(prop.lc.df) = paste0("cs", unique.crops)
 Prop.CropScape = prop.lc.df
+rm(ex.mat, pb, unique.crops, prop.lc.df)
 
 #------------------------------------13. Grid NLCD------------------------------------
 
@@ -286,11 +304,11 @@ nlcd.vx = velox(stack(nlcd))
 spol = gBuffer(species.spatial.nlcd, width=1000, byid=TRUE)
 spdf = SpatialPolygonsDataFrame(spol, data.frame(id=1:length(spol)), FALSE)
 ex.mat = nlcd.vx$extract(spdf)
-rm(nlcd.vx)
+rm(nlcd.vx, spol, spdf)
 
 #----Calculating proportional cover----
 pb = txtProgressBar(min = 1, max = length(ex.mat), initial = 1) 
-unique.nlcd = sort(unique(values(nlcd)))
+unique.nlcd = sort(unique(nlcd))
 prop.rep = rep(0,length(unique.nlcd))
 if(T){
   if(exists("prop.lc.df")){rm(prop.lc.df)}
@@ -310,7 +328,7 @@ if(T){
   prop.lc.df = t(prop.lc.df)
   rownames(prop.lc.df) = NULL
 }
-colnames(prop.lc.df) = paste0("nlcd", sort(unique(values(nlcd))))
+colnames(prop.lc.df) = paste0("nlcd", unique.nlcd)
 Prop.NLCD = prop.lc.df
 
 #------------------------------------14. Grid Elevation------------------------------------
@@ -353,6 +371,9 @@ crs(SDM.raster) = crs(grid)
 plot(rasterFromXYZ(predictions), main = "Species Distribution Model",
      col=colorRampPalette(c("darkgreen", "yellow", "red"))(100), zlim=c(0,1))
 
+plot(rasterFromXYZ(predictions), main = "Species Distribution Model",
+     col=plasma(100), zlim=c(0,1))
+
 #----Leaflet----
 pal1 = colorNumeric(rev(c("#FF0000", "#FFFF00", "#228B22")), values(SDM.raster),
                     na.color = "transparent")
@@ -365,6 +386,11 @@ leaflet() %>% addTiles(urlTemplate = "https://mts1.google.com/vt/lyrs=s&hl=en&sr
   addLegend(pal = pal1, values = seq(0,0.96,0.1), title = "Pr(Occurence)") %>%
   addCircleMarkers(lng=pres.nD$lon, lat = pres.nD$lat, radius=0.4)
 
+
+leaflet() %>% addTiles() %>%
+  addRasterImage(SDM.raster, colors = pal1, opacity = 0.5) %>%
+  addLegend(pal = pal1, values = seq(0,0.96,0.1), title = "Pr(Occurence)")
+
 ggplot() +  
   theme_void() +
   scale_fill_viridis_c() +
@@ -372,6 +398,5 @@ ggplot() +
   ylim(ylim=c(min(predictions$lat)-3, max(predictions$lat)+3)) +
   borders("world") +
   geom_tile(data=predictions, aes(x=predictions$long, y=predictions$lat, fill=predictions$rf), alpha=0.8)
-
 
 # Implement foreach for 6 cores.
