@@ -232,11 +232,17 @@ for(i in 1:10){
   rf.dfs[[i]]= rf.dfs[[i]][1:(length(rf.dfs[[i]]$pa)-1),]
 } # last one in rf.dfs[[10]] is NA, just a simple counting problem.
 
-#----Running Random Forest models----
+#----Loop to create training & testing sets----
+
+#----Running Random Forest models---- # Fix to run on training
 rf = vector("list", 10)
 for(i in 1:10){
   rf[[i]] = randomForest(pa ~ ., rf.dfs[[i]])
 }
+
+#----Loop to evaluate each rf, storing AUC----
+
+#----AUC boxplot----
 
 #----Splitting into training and testing----
 #set.seed(4797) 
